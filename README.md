@@ -1,6 +1,14 @@
 # personal-health-sync
 
-**Aggregate your scattered health data — Strava workouts + Xiaomi body-comp scale — into one local, queryable store. No cloud, no subscription, your data never leaves your machine.**
+> ✨ **Found this useful? Give it a ⭐ — it helps others discover it.**
+
+**Aggregate your scattered health data — Strava workouts + Xiaomi body-composition scale — into one local, queryable store. No cloud, no subscription, your data never leaves your machine.**
+
+[![Stars](https://img.shields.io/github/stars/shkyyy18/personal-health-sync?style=social)](https://github.com/shkyyy18/personal-health-sync)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+[![platform](https://img.shields.io/badge/platform-Windows-orange.svg)](#windows-only)
+[![data](https://img.shields.io/badge/data-FHIR--lite-success.svg)](https://hlth.io)
 
 个人健康数据多源自动归集：把散落在 Strava、米家体脂秤里的数据自动拉到本地，归一成一个统一的 FHIR-lite 查询层。零云依赖、零订阅，数据全部留在本机。
 
