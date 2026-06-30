@@ -1,0 +1,15 @@
+# Strava 同步
+requests>=2.28
+
+# 米家扫码登录（二维码生成）
+qrcode>=7.4
+
+# 米家设备/账号 API（mijia_health_sync.py 用）
+# 上游: https://github.com/aldihasni/python-mijiaAPI
+python-mijiaAPI
+
+# Mi Fitness 云（mifitness_sync.py 用，体脂秤 S800 数据）
+# 上游: https://github.com/kubulashvili/mi-fitness-mcp  (MIT)
+# 安装: pip install mi-fitness-mcp
+#      或 git clone 后 pip install -e .
+mi-fitness-mcp

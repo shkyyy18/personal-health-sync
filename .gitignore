@@ -1,0 +1,38 @@
+# ═══ 数据与凭据 —— 绝不提交 ═══
+data/
+**/data/
+**/.mijia/
+**/auth.json
+**/login_qr.png
+**/config/strava_config.json
+**/*secret*
+**/*credential*
+**/*.token
+.env
+.env.*
+*.pem
+*.key
+
+# ═══ 第三方 vendored 源码 ═══
+.vendor/
+**/.vendor/
+
+# ═══ Python ═══
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+
+# ═══ 临时 / 日志 ═══
+*.tmp
+*.bak
+*.log
+**/logs/
+
+# ═══ OS ═══
+Thumbs.db
+desktop.ini
+.DS_Store
