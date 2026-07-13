@@ -1,146 +1,147 @@
-# personal-health-sync
+<div align="center">
 
-> ✨ **Found this useful? Give it a ⭐ — it helps others discover it.**
+# Personal Health Sync
 
-**Aggregate your scattered health data — Strava workouts + Xiaomi body-composition scale — into one local, queryable store. No cloud, no subscription, your data never leaves your machine.**
+### Turn health exports into one private, portable timeline
 
-[![Stars](https://img.shields.io/github/stars/shkyyy18/personal-health-sync?style=social)](https://github.com/shkyyy18/personal-health-sync)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
-[![platform](https://img.shields.io/badge/platform-Windows-orange.svg)](#windows-only)
-[![data](https://img.shields.io/badge/data-FHIR--lite-success.svg)](https://hlth.io)
+Normalize generic CSV records and optional connector output into a small local observation store, then generate an offline HTML dashboard you can keep, inspect, and move between devices.
 
-个人健康数据多源自动归集：把散落在 Strava、米家体脂秤里的数据自动拉到本地，归一成一个统一的 FHIR-lite 查询层。零云依赖、零订阅，数据全部留在本机。
+[![CI](https://github.com/shkyyy18/personal-health-sync/actions/workflows/ci.yml/badge.svg)](https://github.com/shkyyy18/personal-health-sync/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/shkyyy18/personal-health-sync)](https://github.com/shkyyy18/personal-health-sync/releases/latest)
+[![Python](https://img.shields.io/badge/python-3.10%2B-3776AB)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Core dependencies](https://img.shields.io/badge/core%20dependencies-0-brightgreen)](pyproject.toml)
 
-> ⚠️ **Windows-only**：Strava token 通过 Windows 用户级注册表（`HKCU\Environment`）持久化与自动刷新，脚本依赖 `winreg`。macOS/Linux 需自行改造成 `.env`/keyring 方案。
+[**60-second demo**](#60-second-demo-no-account-or-hardware) | [Connector matrix](#connector-and-hardware-matrix) | [Roadmap](ROADMAP.md) | [Contributing](CONTRIBUTING.md)
 
----
+**Cross-platform core | Local-only | Synthetic demo | Optional hardware connectors**
 
-## 为什么做
+</div>
 
-个人健康数据天然分散：运动在 Strava、体脂在米家、心率睡眠在手环 APP，每家都不提供干净的桌面端导出，手动截图 OCR 又脆又累。这个项目解决三件具体的事：
+![Portable local dashboard](docs/assets/healthsync-demo.svg)
 
-1. **Strava OAuth 全自动刷新** —— token 过期自动用 refresh_token 换新并写回，不用再每隔几天手动重授权。
-2. **复用米家登录态拉体脂秤数据** —— 一次扫码登录米家 APP，凭据复用到 Mi Fitness 云，自动拉体脂秤测量值，告别截图 OCR。
-3. **多源数据归一到 FHIR-lite** —— 体重/体脂/心率/步数/睡眠/运动全部归一成统一的 `Observation` 资源，一个查询入口，dashboard 或 LLM agent 可直接消费。
-
-## 架构
-
-```
-┌──────────────┐   OAuth + 自动刷新    ┌─────────────────┐
-│   Strava API │ ───────────────────▶ │ strava_sync.py  │ ──┐
-└──────────────┘                      └─────────────────┘   │
-                                                          │   ┌──────────────┐   ┌─────────────┐
-┌──────────────┐   复用米家扫码登录态   ┌─────────────────┐   ├──▶│  本地 JSON   │ ─▶│ health_fhir │ ─▶ 统一查询
-│ Mi Fitness 云│ ───────────────────▶ │mifitness_sync.py│ ──┤    │  data/*.json │   │  .py 归一层 │    latest()
-└──────────────┘                      └─────────────────┘   │   └──────────────┘   └─────────────┘    history()
-                                        ▲                    │                                            daily_summary()
-┌──────────────┐   一次扫码登录         │                    │
-│ 米家 APP 扫码│ ───────────────────▶ ┌┴────────────────┐   │
-└──────────────┘                      │mijia_health_sync │ ──┘
-                                      │ .py (登录态落盘)  │
-                                      └─────────────────┘
-```
-
-## 数据源覆盖
-
-| 数据源 | 自动化 | 脚本 | 说明 |
-|---|---|---|---|
-| Strava 运动（骑行/跑步/游泳） | ✅ 全自动 | `strava_sync.py` | OAuth 自动刷新，cron 友好 |
-| 米家体脂秤（S800，含体脂/肌肉/骨盐/内脏脂肪） | ✅ 全自动 | `mifitness_sync.py` + `mijia_health_sync.py` | 复用米家登录态，无需重登录 |
-| 手环心率/睡眠/血氧/压力 | ⚠️ 半自动 | `import_nxk.py`（本仓库未含） | 需手机端手动导出 `.nxk` 备份，无云端自动方案 |
-
-> 手环数据卡在数据源：NXK 是本地备份格式，必须手机端手动导出。本仓库只发布已跑通的两条**全自动**云端路径。
-
-## 快速开始
-
-### 前置
+## 60-second demo: no account or hardware
 
 ```bash
 git clone https://github.com/shkyyy18/personal-health-sync.git
 cd personal-health-sync
-pip install -r requirements.txt
+python -m pip install -e .
+healthsync --store demo-store.json demo --days 30 --dashboard dashboard.html
 ```
 
-### ① 配置 Strava
+Open `dashboard.html`. It contains clearly labelled synthetic data, works offline, and makes no network requests.
 
-1. 在 [Strava API 设置](https://www.strava.com/settings/api) 建一个应用，拿到 `client_id` + `client_secret`。
-2. 把配置模板复制到正式位置并填入 `client_id`：
-   ```bash
-   mkdir -p scripts/config
-   cp examples/strava_config_example.json scripts/config/strava_config.json
-   # 编辑 scripts/config/strava_config.json，填你的 client_id
-   ```
-3. 浏览器访问（替换 `client_id`）拿一次性授权 code：
-   ```
-   https://www.strava.com/oauth/authorize?client_id=你的ID&response_type=code&redirect_uri=http://localhost&approval_prompt=force&scope=activity:read_all
-   ```
-   授权后从地址栏复制 `code=` 后面那串。
-4. 换 token（交互输入 code 和 client_secret，secret 不回显；成功自动写入注册表并回读校验）：
-   ```bash
-   python scripts/strava_set_tokens.py
-   ```
-5. 拉数据：
-   ```bash
-   python scripts/strava_sync.py 7      # 最近 7 天
-   ```
-
-### ② 配置米家体脂秤
-
-1. 首次扫码登录米家（弹出二维码，用「米家」APP 扫）：
-   ```bash
-   python scripts/mijia_health_sync.py discover
-   ```
-   登录态落盘到 `data/.mijia/auth.json`。
-2. 拉体脂数据：
-   ```bash
-   python scripts/mifitness_sync.py             # 最近 7 天
-   python scripts/mifitness_sync.py --backfill  # 最近 90 天回填
-   ```
-
-### ③ 查询统一数据
+Import your own normalized CSV later:
 
 ```bash
-python scripts/health_fhir.py
-```
-归一后的 `Observation` 落盘到 `data/fhir_observations.json`。在代码里：
-
-```python
-import sys; sys.path.insert(0, "scripts")
-import health_fhir
-
-health_fhir.latest("body-weight")          # 最新体重
-health_fhir.history("body-fat-pct", 30)    # 近 30 天体脂序列
-health_fhir.daily_summary()                # 今天全部指标
-health_fhir.codes()                        # 所有可用指标码
+healthsync --store health.json import-csv examples/observations.csv
+healthsync --store health.json dashboard --output dashboard.html
+healthsync --store health.json status --json
 ```
 
-## 安全设计
-
-- **token 不落盘文件**：Strava 的 `client_secret` / `access_token` / `refresh_token` 全程走环境变量（Windows 注册表），代码里看不到也不写回任何 json。`strava_config.json` 只存非敏感的 `client_id`。
-- **凭据文件已 gitignore**：`data/`（含体征数值）、`data/.mijia/auth.json`（米家账号级凭据）、`config/strava_config.json` 全部排除，不会进入版本库。发布前已逐文件核查无个人数据。
-- **米家 auth.json 是账号级凭据**：泄露等于账号被盗，切勿外传。
-
-## 局限
-
-- **Windows-only**：依赖 `winreg` 持久化 token。跨平台需改造成 `.env` 或系统 keyring。
-- **手环体征数据无云端自动方案**：心率/睡眠/血氧需手机端手动导出 NXK。
-- **米家 API 为第三方逆向**：`python-mijiaAPI` 和 `mi-fitness-mcp` 都是社区项目，小米改接口时可能失效。
-- **中文输出**：脚本 print 和代码注释为中文，国际用户需自行适配。
-
-## 文件说明
-
+```csv
+date,code,value,unit,source,display
+2026-07-10,body-weight,72.4,kg,xiaomi-scale,Body weight
 ```
-scripts/
-├── strava_sync.py          # Strava 拉取 + token 自动刷新（核心）
-├── strava_set_tokens.py    # OAuth 一次性换 token，写入注册表
-├── mifitness_sync.py       # Mi Fitness 云体脂同步
-├── mijia_health_sync.py    # 米家扫码登录 + 设备发现
-└── health_fhir.py          # 多源 → FHIR-lite 统一归一层
-examples/
-└── strava_config_example.json   # 配置模板（占位符）
+
+Repeated imports are idempotent by `(date, code, source)`.
+
+## What works today
+
+- A dependency-free, cross-platform Python core.
+- Generic CSV import with a documented observation shape.
+- Deterministic local merge, latest-value queries, and daily summaries.
+- A synthetic demo that proves the workflow without credentials or devices.
+- A self-contained HTML dashboard with no server and no external assets.
+- Optional legacy Strava and Xiaomi scripts kept separate from the stable core.
+
+The useful core remains testable even when a hardware vendor changes an endpoint, authentication flow, or export format.
+
+## Connector and hardware matrix
+
+Exact status matters more than a long vendor list.
+
+| Device or ecosystem | Usable path today | Status |
+|---|---|---|
+| Any source with normalized CSV | `healthsync import-csv` | Stable |
+| Strava | `scripts/strava_sync.py` | Optional connector |
+| Xiaomi / Mi Fitness scale | `scripts/mifitness_sync.py` | Experimental; unofficial API |
+| Xiaomi Home discovery | `scripts/mijia_health_sync.py` | Experimental; unofficial API |
+| Apple Watch / Apple Health | Generic CSV only | Native export adapter planned for v0.3 |
+| Android Health Connect | Generic CSV only | Export adapter planned for v0.3 |
+| Huawei Health devices and scales | Generic CSV only | Export adapter planned for v0.4 |
+| Garmin | Generic CSV only | Export adapter planned for v0.4 |
+| Other Bluetooth scales | Export through a compatible app, then normalize to CSV | Device-specific connector not included |
+
+"Planned" does not mean supported today. A new adapter must include synthetic fixtures, document authentication and network behavior, and avoid proprietary sample data.
+
+For Android users who need direct Bluetooth scale support now, projects such as openScale may provide the device layer; Personal Health Sync focuses on the vendor-neutral local interchange and reporting layer.
+
+## Why this exists
+
+Health data is fragmented across watches, phones, scales, sports platforms, and proprietary apps. This project separates the system into two layers:
+
+1. **Stable local core** - normalization, merge, query, demo, and portable reporting.
+2. **Optional connectors** - vendor APIs or exported files that can evolve independently.
+
+This is deliberately not another cloud account. The store is a readable JSON file and the dashboard is a portable HTML file.
+
+## Local data model
+
+Each record uses a deliberately small, FHIR-inspired shape:
+
+```json
+{
+  "resourceType": "Observation",
+  "date": "2026-07-10",
+  "code": "body-weight",
+  "display": "Body weight",
+  "value": 72.4,
+  "unit": "kg",
+  "source": "xiaomi-scale"
+}
 ```
+
+It is not a complete FHIR implementation. The goal is a predictable local interchange format for dashboards, scripts, and personal agents.
+
+## Privacy and safety
+
+- The core performs no network requests and has zero runtime dependencies.
+- Real stores, tokens, QR images, account sessions, secrets, logs, and `data/` are gitignored.
+- Demo and test fixtures are synthetic.
+- Do not upload health records to issues or pull requests.
+- The generated dashboard embeds records in the local HTML file; protect it like the source data.
+- This is a personal data tool, **not medical software**. It does not diagnose, treat, or provide emergency guidance.
+
+See [SECURITY.md](SECURITY.md) before enabling a vendor connector.
+
+## Add a connector
+
+Contributions are welcome, especially export adapters that can be tested without real accounts or hardware. Start with an issue that documents:
+
+- the vendor and export format;
+- whether network access or credentials are required;
+- a minimal synthetic fixture;
+- field mapping into the observation model;
+- privacy, rate-limit, and maintenance risks.
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) and [ROADMAP.md](ROADMAP.md).
+
+## Development
+
+```bash
+python -m pip install -e .
+python -m unittest discover -s tests -v
+python -m compileall -q healthsync tests
+python -m healthsync --store demo-store.json demo --days 7
+```
+
+CI runs on Windows and Linux with Python 3.10 and 3.12.
+
+## Project status
+
+Version 0.2 is an early but usable local core. Generic import, merge, demo, query, and reporting are ready for validation. Vendor-specific coverage is intentionally limited and tracked separately in the roadmap.
 
 ## License
 
-MIT — 见 [LICENSE](LICENSE)。所用第三方库（`python-mijiaAPI`、`mi-fitness-mcp`）均为各自 MIT 协议。
+MIT. Third-party connector libraries retain their own licenses and terms.

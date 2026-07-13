@@ -36,3 +36,9 @@ dist/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Generated local stores and dashboards
+demo-store.json
+health.json
+dashboard.html
+dist/

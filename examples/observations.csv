@@ -1,0 +1,5 @@
+date,code,value,unit,source,display
+2026-07-10,body-weight,72.4,kg,xiaomi-scale,Body weight
+2026-07-10,steps,8432,steps,health-connect,Steps
+2026-07-10,sleep-duration,7.2,hours,apple-health,Sleep
+2026-07-11,run-distance,5200,m,strava,Run distance
